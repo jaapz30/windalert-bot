@@ -7,7 +7,7 @@ import os
 # ===== INSTELLINGEN =====
 BOT_TOKEN = "8184152270:AAF3BEkQP6m6nX2Jk4MVzQKuFTOSeSX3Va8"
 CHAT_ID = "6644202562"
-WIND_THRESHOLDS = [3, 4, 5, 15]  # Voeg hier zoveel drempels toe als je wilt
+WIND_THRESHOLDS = [5, 10, 15, 20, 25, 30, 35, 40]  # Nieuwe drempels
 ONLY_BETWEEN_HOURS = (7, 20)  # Actief tussen 07:00 en 20:00
 STATUS_FILE = "status.json"
 
@@ -82,11 +82,12 @@ def main():
     windstoten_knopen = windgusts_kmh * 0.539957
     richting = graden_naar_richting(winddirection_deg)
 
-    for drempel in WIND_THRESHOLDS:
+    for drempel in sorted(WIND_THRESHOLDS, reverse=True):
         key = str(drempel)
         if knopen >= drempel and not status.get(key, False):
             stuur_telegram_bericht(knopen, richting, temperature, windstoten_knopen)
             status[key] = True
+            break  # Alleen hoogste melding per run
 
     save_status(status)
 
