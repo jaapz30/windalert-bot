@@ -7,7 +7,7 @@ import os
 # ===== INSTELLINGEN =====
 BOT_TOKEN = "8184152270:AAF3BEkQP6m6nX2Jk4MVzQKuFTOSeSX3Va8"
 CHAT_ID = "6644202562"
-WIND_THRESHOLD_KNOTS = 5  # Testdrempel, makkelijk aan te passen
+WIND_THRESHOLDS = [3, 4, 5, 15]  # Voeg hier zoveel drempels toe als je wilt
 ONLY_BETWEEN_HOURS = (7, 20)  # Actief tussen 07:00 en 20:00
 STATUS_FILE = "status.json"
 
@@ -26,11 +26,10 @@ def load_status():
     if os.path.exists(STATUS_FILE):
         with open(STATUS_FILE, 'r') as f:
             data = json.load(f)
-            # Reset automatisch als datum niet overeenkomt
             if data.get("datum") != today:
-                return {"datum": today, "gemeld": False}
+                return {"datum": today, **{str(d): False for d in WIND_THRESHOLDS}}
             return data
-    return {"datum": today, "gemeld": False}
+    return {"datum": today, **{str(d): False for d in WIND_THRESHOLDS}}
 
 def save_status(status):
     with open(STATUS_FILE, 'w') as f:
@@ -39,18 +38,10 @@ def save_status(status):
 # ===== TELEGRAM BERICHT VERZENDEN =====
 def stuur_telegram_bericht(knopen, richting, temperatuur, windstoten_knopen):
     bericht = (
-        "*SWA WINDALERT!*
-
-"
-        f"Actuele wind: *{knopen:.1f}* knopen uit het *{richting}*
-
-"
-        f"Windstoten: *{windstoten_knopen:.1f}* knopen
-
-"
-        f"Temperatuur: *{temperatuur:.1f}°C*
-
-"
+        "*SWA WINDALERT!*\n\n"
+        f"Actuele wind: *{knopen:.1f}* knopen uit het *{richting}*\n\n"
+        f"Windstoten: *{windstoten_knopen:.1f}* knopen\n\n"
+        f"Temperatuur: *{temperatuur:.1f}°C*\n\n"
         "[🌐 SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     )
 
@@ -71,8 +62,6 @@ def main():
         return
 
     status = load_status()
-    if status.get("gemeld"):
-        return
 
     response = requests.get(API_URL)
     if response.status_code != 200:
@@ -90,10 +79,13 @@ def main():
     windstoten_knopen = windgusts_kmh * 0.539957
     richting = graden_naar_richting(winddirection_deg)
 
-    if knopen >= WIND_THRESHOLD_KNOTS:
-        stuur_telegram_bericht(knopen, richting, temperature, windstoten_knopen)
-        status['gemeld'] = True
-        save_status(status)
+    for drempel in WIND_THRESHOLDS:
+        key = str(drempel)
+        if knopen >= drempel and not status.get(key, False):
+            stuur_telegram_bericht(knopen, richting, temperature, windstoten_knopen)
+            status[key] = True
+
+    save_status(status)
 
 if __name__ == "__main__":
     main()
