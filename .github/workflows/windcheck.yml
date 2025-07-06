@@ -2,8 +2,7 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Elke minuut voor testdoeleinden
-
+    - cron: '*/10 7-20 * * *'  # Elke 10 minuten tussen 07:00 en 20:00
   workflow_dispatch:
 
 jobs:
