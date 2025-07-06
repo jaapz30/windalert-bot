@@ -35,7 +35,11 @@ def save_status(status):
 
 # ===== TELEGRAM BERICHT VERZENDEN =====
 def stuur_telegram_bericht(knopen, richting):
-    bericht = f"\ud83d\udca8 *SWA Windalert*\nActuele wind: *{knopen:.1f}* knopen uit het *{richting}*.\n\ud83c\udf10 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+    bericht = (
+        "*SWA Windalert*\n"
+        f"Actuele wind: *{knopen:.1f}* knopen uit het *{richting}*.\n"
+        "[🌐 SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+    )
     payload = {
         "chat_id": CHAT_ID,
         "text": bericht,
