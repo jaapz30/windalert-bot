@@ -1,0 +1,25 @@
+name: Windalert Telegram Bot
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # draait elke 10 minuten
+  workflow_dispatch:        # ook handmatig starten mogelijk
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repo klonen
+        uses: actions/checkout@v3
+
+      - name: Python installeren
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Vereisten installeren
+        run: pip install requests
+
+      - name: Script draaien
+        run: python windalert_bot.py
