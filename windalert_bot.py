@@ -27,8 +27,11 @@ def load_status():
         with open(STATUS_FILE, 'r') as f:
             data = json.load(f)
             if data.get("datum") != today:
-                return {"datum": today, **{str(d): False for d in WIND_THRESHOLDS}}
+                return reset_status(today)
             return data
+    return reset_status(today)
+
+def reset_status(today):
     return {"datum": today, **{str(d): False for d in WIND_THRESHOLDS}}
 
 def save_status(status):
