@@ -32,4 +32,4 @@ jobs:
           git config --global user.email "windbot@example.com"
           git add status.json || exit 0
           git diff --cached --quiet && echo "No changes to commit" || git commit -m "Update status.json"
-          git push https://jaapz30:${{ secrets.GH
+          git push https://jaapz30:${{ secrets.GH_TOKEN }}@github.com/jaapz30/windalert-bot.git HEAD:main
