@@ -2,23 +2,33 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 7-20 * * *'  # Elke 10 minuten tussen 07:00 en 20:00
+    # Elke 10 minuten tussen 07:00 en 20:00 Nederlandse tijd (UTC = 05:00-18:00)
+    - cron: '*/10 5-18 * * *'
   workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.x
+          python-version: '3.x'
 
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run script
+      - name: Run windalert bot
         run: python windalert_bot.py
+
+      - name: Commit and push status.json
+        run: |
+          git config --global user.name "WindBot"
+          git config --global user.email "bot@github.com"
+          git add status.json
+          git commit -m "Update status.json" || echo "No changes to commit"
+          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
