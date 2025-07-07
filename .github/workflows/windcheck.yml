@@ -2,10 +2,7 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    # Elke 10 minuten tussen 07:00 en 23:00 Nederlandse tijd (05:00–21:00 UTC)
-    - cron: '*/10 5-21 * * *'
-    # Reset status.json elke dag om 00:00 Nederlandse tijd (22:00 UTC)
-    - cron: '0 22 * * *'
+    - cron: '*/10 5-21 * * *'  # elke 10 minuten tussen 7:00 en 23:00 Nederlandse tijd (UTC = 5-21)
   workflow_dispatch:
 
 jobs:
@@ -18,24 +15,21 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r requirements.txt
 
       - name: Run windalert bot
-        run: |
-          # Check of dit een reset is (middernacht NL tijd = 22:00 UTC)
-          if [ "$(date -u +%H:%M)" = "22:00" ]; then
-            echo '{}' > status.json
-          else
-            python windalert_bot.py
-          fi
+        run: python windalert_bot.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
       - name: Commit and push status.json
         run: |
           git config --global user.name "WindBot"
-          git config --global user.email "bot@github.com"
+          git config --global user.email "windbot@example.com"
           git add status.json
           git commit -m "Update status.json" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git push https://jaapz30:${{ secrets.GH_TOKEN }}@github.com/jaapz30/windalert-bot.git HEAD:main
