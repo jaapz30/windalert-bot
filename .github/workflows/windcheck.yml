@@ -26,10 +26,13 @@ jobs:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
-      - name: Commit and push status.json
+      - name: Commit and push status.json if changed
         run: |
           git config --global user.name "WindBot"
           git config --global user.email "windbot@example.com"
           git add status.json
-          git commit -m "Update status.json" || echo "No changes to commit"
-          git push https://jaapz30:${{ secrets.GH_TOKEN }}@github.com/jaapz30/windalert-bot.git HEAD:main
+          if ! git diff --cached --quiet; then
+            git commit -m "Auto-update status.json"
+            git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          else
+            echo "Geen wijzigingen om te committen"
