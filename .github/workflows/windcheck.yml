@@ -21,8 +21,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run windalert bot
-        run: |
-          python windalert_bot.py
+        run: python windalert_bot.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
