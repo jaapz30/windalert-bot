@@ -11,24 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install requests
+    - name: Install dependencies
+      run: pip install requests
 
-      - name: Run windalert bot
-        run: python windalert_bot.py
+    - name: Run windalert bot
+      run: python windalert_bot.py
 
-      - name: Commit and push status.json
-        run: |
-          git config --global user.name "WindBot"
-          git config --global user.email "bot@github.com"
-          git add status.json
-          git commit -m "Update status.json" || echo "No changes to commit"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+    - name: Commit and push status.json
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      run: |
+        git config --global user.name "WindBot"
+        git config --global user.email "bot@github.com"
+        git add status.json
+        git commit -m "Update status.json" || echo "No changes to commit"
+        git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git HEAD:main
+
+        Fix: verbeterde tijdzone en GH_TOKEN support
