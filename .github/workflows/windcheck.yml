@@ -4,6 +4,8 @@ on:
   schedule:
     # Elke 10 minuten tussen 07:00 en 23:00 Nederlandse tijd (05:00–21:00 UTC)
     - cron: '*/10 5-21 * * *'
+    # Reset status.json elke dag om 00:00 Nederlandse tijd (22:00 UTC)
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 jobs:
@@ -22,7 +24,13 @@ jobs:
         run: pip install requests
 
       - name: Run windalert bot
-        run: python windalert_bot.py
+        run: |
+          # Check of dit een reset is (middernacht NL tijd = 22:00 UTC)
+          if [ "$(date -u +%H:%M)" = "22:00" ]; then
+            echo '{}' > status.json
+          else
+            python windalert_bot.py
+          fi
 
       - name: Commit and push status.json
         run: |
