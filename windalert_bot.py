@@ -1,57 +1,52 @@
-# windalert_bot.py
-
 import requests
 import json
-from datetime import datetime
+import datetime
 import os
 
-# ===== INSTELLINGEN =====
-BOT_TOKEN = "8184152270:AAF3BEkQP6m6n2KJ4Mv7cQKuFTOSsEX3Va8"
-CHAT_ID = "6644202562"
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-API_URL = "https://api.open-meteo.com/v1/forecast?latitude=52.7078&longitude=5.874&current_weather=true"
-
-def graden_naar_richting(graden):
-    richtingen = ['N', 'NO', 'O', 'ZO', 'Z', 'ZW', 'W', 'NW']
-    index = round(graden / 45) % 8
+def graden_naar_windrichting(graden):
+    richtingen = ['Noord', 'NNO', 'NO', 'ONO', 'Oost', 'OZO', 'ZO', 'ZZO',
+                  'Zuid', 'ZZW', 'ZW', 'WZW', 'West', 'WNW', 'NW', 'NNW']
+    index = int((graden + 11.25) / 22.5) % 16
     return richtingen[index]
 
-def stuur_telegram_bericht(knopen, richting, temperatuur, windstoten_knopen):
-    bericht = (
-        "💨 *WINDALERT!*\n"
-        f"Actuele wind: *{knopen:.1f}* knopen uit het *{richting}*\n\n"
-        f"💥 Windstoten: *{windstoten_knopen:.1f}* knopen\n"
-        f"🌡️ Temperatuur: *{temperatuur:.1f}°C*\n\n"
-        "[🌐 SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
-    )
+def verzend_telegrambericht(snelheid, richting):
+    bericht = f"💨 *WINDALARM*\nSnelheid: {snelheid} knopen\nRichting: {richting}\n🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     requests.post(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        json={
-            "chat_id": CHAT_ID,
+        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+        data={
+            "chat_id": TELEGRAM_CHAT_ID,
             "text": bericht,
             "parse_mode": "Markdown"
         }
     )
 
 def main():
-    response = requests.get(API_URL)
-    if response.status_code != 200:
-        print("Fout bij ophalen weerdata")
-        return
-
+    response = requests.get("https://api.open-meteo.com/v1/forecast?latitude=52.6&longitude=5.6&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn")
     data = response.json()
-    weer = data["current_weather"]
+    wind_kts = round(data["current"]["wind_speed_10m"])
+    richting = graden_naar_windrichting(data["current"]["wind_direction_10m"])
 
-    wind_kmh = weer["windspeed"]
-    wind_knopen = wind_kmh * 0.539957
-    richting = graden_naar_richting(weer["winddirection"])
-    temperatuur = weer["temperature"]
-    windstoten_knopen = weer.get("windgusts", 0) * 0.539957 if "windgusts" in weer else 0
+    with open("status.json", "r") as f:
+        status = json.load(f)
 
-    # Testmelding sturen
-    stuur_telegram_bericht(wind_knopen, richting, temperatuur, windstoten_knopen)
-    print("Testmelding verzonden!")
+    vandaag = datetime.datetime.now().strftime("%Y-%m-%d")
+    if status["datum"] != vandaag:
+        status = {
+            "datum": vandaag,
+            "5": False, "10": False, "15": False, "20": False,
+            "25": False, "30": False, "35": False, "40": False
+        }
 
-# ===== UITVOERING STARTEN =====
-if __name__ == "__main__":
-    main()
+    voor_waarden = [15, 20, 25, 30, 35]
+    for waarde in voor_waarden:
+        if wind_kts >= waarde and not status[str(waarde)]:
+            verzend_telegrambericht(wind_kts, richting)
+            status[str(waarde)] = True
+
+    with open("status.json", "w") as f:
+        json.dump(status, f, indent=2)
+
+main()
