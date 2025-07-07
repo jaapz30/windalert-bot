@@ -1,0 +1,45 @@
+name: Reset status.json at midnight
+
+on:
+  schedule:
+    - cron: '1 0 * * *' # Elke dag om 00:01 UTC
+  workflow_dispatch:
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Create fresh status.json
+        run: |
+          echo "{
+            \"datum\": \"$(date +%Y-%m-%d)\",
+            \"5\": false,
+            \"10\": false,
+            \"15\": false,
+            \"20\": false,
+            \"25\": false,
+            \"30\": false,
+            \"35\": false,
+            \"40\": false
+          }" > status.json
+
+      - name: Commit and push
+        run: |
+          git config --global user.name "WindBot"
+          git config --global user.email "windbot@example.com"
+          git add status.json
+          git commit -m "Reset status.json automatically at midnight"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
