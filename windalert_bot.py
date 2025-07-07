@@ -93,3 +93,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+if __name__ == "__main__":
+    send_telegram_bericht(
+        knopen=100,
+        richting="NO",
+        temperatuur=23,
+        windstoten_knopen=110
+    )
