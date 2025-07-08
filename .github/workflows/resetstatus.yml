@@ -2,40 +2,34 @@ name: Reset status.json at midnight
 
 on:
   schedule:
-    - cron: '1 0 * * *'  # Elke dag om 00:01 UTC
+    - cron: '1 0 * * *'  # Dagelijks om 00:01 UTC
   workflow_dispatch:
 
 jobs:
   reset:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # ✅ nodig voor commit en push
 
     steps:
-      - name: 📥 Repo klonen
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🐍 Python installeren
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: 💾 status.json overschrijven
+      - name: Create fresh status.json
         run: |
           echo '{
-            "melding_5": false,
-            "melding_10": false,
-            "melding_15": false,
-            "melding_20": false,
-            "melding_25": false,
-            "melding_30": false,
-            "melding_35": false
+            "datum": "'$(date +%Y-%m-%d)'",
+            "5": false,
+            "10": false,
+            "15": false,
+            "20": false,
+            "25": false,
+            "30": false,
+            "35": false
           }' > status.json
 
-      - name: 🔄 Commit & push (alleen als gewijzigd)
+      - name: Commit & push status.json
         run: |
           git config --global user.email "bot@windalert.github"
-          git config --global user.name "windbot"
-          git add status.json || true
-          git commit -m "🕛 Reset status.json" || echo "Niets te committen"
+          git config --global user.name "WindAlert Bot"
+          git add status.json
+          git commit -m "Reset status.json om middernacht" || echo "Niets om te committen"
           git push || echo "Niets om te pushen"
