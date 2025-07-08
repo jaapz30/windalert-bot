@@ -10,17 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: 🛎️ Repository ophalen
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: 🐍 Python installeren
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
+      - name: 📦 Vereisten installeren
         run: pip install requests beautifulsoup4
 
-      - name: Run windalert script
+      - name: 💨 Windalarm-script uitvoeren
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
