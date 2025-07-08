@@ -4,7 +4,6 @@ import datetime
 import os
 from bs4 import BeautifulSoup
 
-# Secrets van GitHub Actions
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -53,7 +52,7 @@ def reset_status_als_middernacht(status):
 
 def verzend_telegrambericht(wind, richting):
     bericht = (
-        f"💨 *WINDALARM*\n"
+        f"💨 *WINDALARM (TEST)*\n"
         f"Snelheid: {wind} knopen\n"
         f"Richting: {richting}\n"
         f"🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
@@ -64,31 +63,9 @@ def verzend_telegrambericht(wind, richting):
         'parse_mode': 'Markdown'
     }
     response = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=payload)
-    print("Telegram response:", response.text)
+    print("📤 Telegram response:", response.text)
 
 def main():
     gegevens = haal_windgegevens_op()
     if gegevens is None:
-        print("Geen windgegevens beschikbaar")
-        return
-
-    wind, windstoten, temperatuur, richting = gegevens
-    richting = richting.replace(' - ', '-')
-
-    status = laad_status()
-    status = reset_status_als_middernacht(status)
-
-    for drempel in sorted(DREMPELS, reverse=True):
-        key = f"melding_{drempel}"
-        if wind >= drempel and not status.get(key, False):
-            print(f"✅ Drempel {drempel} knopen bereikt. Bericht wordt verzonden.")
-            verzend_telegrambericht(wind, richting)
-            status[key] = True
-            break
-        else:
-            print(f"ℹ️ Drempel {drempel} knopen NIET bereikt of al verzonden.")
-
-    sla_status_op(status)
-
-if __name__ == "__main__":
-    main()
+        print("⚠️ Geen windgegev
