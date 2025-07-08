@@ -29,24 +29,4 @@ def main():
     wind_kts = round(data["current"]["wind_speed_10m"])
     richting = graden_naar_windrichting(data["current"]["wind_direction_10m"])
 
-    with open("status.json", "r") as f:
-        status = json.load(f)
-
-    vandaag = datetime.datetime.now().strftime("%Y-%m-%d")
-    if status["datum"] != vandaag:
-        status = {
-            "datum": vandaag,
-            "5": False, "10": False, "15": False, "20": False,
-            "25": False, "30": False, "35": False, "40": False
-        }
-
-    voor_waarden = [15, 20, 25, 30, 35]
-    for waarde in voor_waarden:
-        if wind_kts >= waarde and not status[str(waarde)]:
-            verzend_telegrambericht(wind_kts, richting)
-            status[str(waarde)] = True
-
-    with open("status.json", "w") as f:
-        json.dump(status, f, indent=2)
-
-main()
+    with open("status.json", "r") a
