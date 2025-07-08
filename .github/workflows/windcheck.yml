@@ -3,26 +3,39 @@ name: Windalert Telegram Bot
 on:
   schedule:
     - cron: '*/10 * * * *'  # Elke 10 minuten
-  workflow_dispatch:        # Handmatig starten mogelijk via GitHub
+  workflow_dispatch:         # Handmatige testmogelijkheid
 
 jobs:
-  run-script:
+  run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🛎️ Repository ophalen
-        uses: actions/checkout@v4
+    - name: 📥 Repo klonen
+      uses: actions/checkout@v3
 
-      - name: 🐍 Python installeren
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
+    - name: 🐍 Python installeren
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
-      - name: 📦 Vereisten installeren
-        run: pip install requests beautifulsoup4
+    - name: 📦 Vereisten installeren
+      run: pip install beautifulsoup4 requests
 
-      - name: 💨 Windalarm-script uitvoeren
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python windalert_bot.py
+    - name: 🔐 Secrets instellen als env
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      run: |
+        echo "TELEGRAM_TOKEN=$TELEGRAM_TOKEN" >> $GITHUB_ENV
+        echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID" >> $GITHUB_ENV
+
+    - name: 🚀 Bot uitvoeren
+      run: python windalert_bot.py
+
+    - name: 💾 status.json committen (indien gewijzigd)
+      run: |
+        git config --global user.email "bot@windalert.github"
+        git config --global user.name "Windbot"
+        git add status.json || true
+        git commit -m "⏰ Update status.json" || echo "Niets te committen"
+        git push || echo "Niets om te pushen"
