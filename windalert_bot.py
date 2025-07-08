@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 from datetime import datetime
 
 # Ingevoerde drempels in knopen
@@ -38,9 +39,9 @@ def verzend_telegrambericht(wind_kts, richting):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     tekst = (
-        "WINDALERT\n"
-        f"Snelheid: {wind_kts} knopen\n"
-        f"Richting: {richting}\n"
+        "🌬️ *WINDALERT*\n"
+        f"Snelheid: *{wind_kts} knopen*\n"
+        f"Richting: *{richting}*\n\n"
         "🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     )
 
@@ -53,4 +54,23 @@ def verzend_telegrambericht(wind_kts, richting):
 
     try:
         requests.post(url, json=payload)
-    except Exception: 
+    except Exception as e:
+        print(f"Fout bij verzenden van Telegrambericht: {e}")
+
+# Hoofdfunctie
+def main():
+    wind_kts, richting = haal_wind_data_op()
+    status = laad_status()
+
+    for drempel in DREMPELS:
+        sleutel = f"melding_{drempel}"
+        if wind_kts >= drempel and not status[sleutel]:
+            verzend_telegrambericht(wind_kts, richting)
+            status[sleutel] = True
+        elif wind_kts < drempel:
+            status[sleutel] = False
+
+    sla_status_op(status)
+
+if __name__ == "__main__":
+    main()
