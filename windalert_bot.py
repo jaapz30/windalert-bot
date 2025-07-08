@@ -1,61 +1,63 @@
-# windalert_bot.py — volledig werkend script voor GitHub Actions met status.json via artifact
-# Meldingen vanaf 5 knopen, geen git push, en geschikt voor automatische reset om middernacht
-
 import requests
 import json
-import datetime
-import os
+from datetime import datetime
 
+# === Instellingen ===
+LAT = 52.645
+LON = 5.385
+THRESHOLDS = [15, 20, 25, 30, 35]
+
+# === Functie om windrichting in graden om te zetten naar windstreek ===
+def graden_naar_richting(graden):
+    richtingen = ['N', 'NO', 'O', 'ZO', 'Z', 'ZW', 'W', 'NW']
+    index = round(graden / 45) % 8
+    return richtingen[index]
+
+# === Laad status.json ===
+try:
+    with open("status.json", "r") as f:
+        status = json.load(f)
+except FileNotFoundError:
+    status = {f"melding_{t}": False for t in THRESHOLDS}
+
+# === Haal actuele windgegevens op ===
+url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&current=wind_speed_10m,wind_direction_10m&timezone=auto"
+response = requests.get(url)
+data = response.json()
+
+windspeed = data["current"]["wind_speed_10m"]
+windrichting = data["current"]["wind_direction_10m"]
+windrichting_tekst = graden_naar_richting(windrichting)
+
+# === Telegram secrets ===
+import os
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-def graden_naar_windrichting(graden):
-    richtingen = ['Noord', 'NNO', 'NO', 'ONO', 'Oost', 'OZO', 'ZO', 'ZZO',
-                  'Zuid', 'ZZW', 'ZW', 'WZW', 'West', 'WNW', 'NW', 'NNW']
-    index = int((graden + 11.25) / 22.5) % 16
-    return richtingen[index]
-
-def verzend_telegrambericht(snelheid, richting):
-    bericht = f"\ud83d\udca8 *WINDALARM*\nSnelheid: {snelheid} knopen\nRichting: {richting}\n\ud83c\udf10 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+# === Bericht sturen ===
+def verzend_telegrambericht(knopen, richting):
+    bericht = (
+        "💨 *WINDALARM*\n"
+        f"Snelheid: {knopen:.1f} knopen\n"
+        f"Richting: {richting}\n"
+        "[🌐 SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+    )
     requests.post(
         f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        data={
+        json={
             "chat_id": TELEGRAM_CHAT_ID,
             "text": bericht,
             "parse_mode": "Markdown"
         }
     )
 
-def main():
-    response = requests.get("https://api.open-meteo.com/v1/forecast?latitude=52.6&longitude=5.6&current=wind_speed_10m,wind_direction_10m&wind_speed_unit=kn")
-    data = response.json()
-    wind_kts = round(data["current"]["wind_speed_10m"])
-    richting = graden_naar_windrichting(data["current"]["wind_direction_10m"])
+# === Check en stuur melding als nodig ===
+for drempel in THRESHOLDS:
+    key = f"melding_{drempel}"
+    if windspeed >= drempel and not status.get(key, False):
+        verzend_telegrambericht(windspeed, windrichting_tekst)
+        status[key] = True
 
-    # Voor testdoeleinden kun je deze regel tijdelijk aanzetten:
-    # wind_kts = 18  # geforceerde testwaarde voor meldingen
-
-    try:
-        with open("status.json", "r") as f:
-            status = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        status = {}
-
-    vandaag = datetime.datetime.now().strftime("%Y-%m-%d")
-    if status.get("datum") != vandaag:
-        status = {
-            "datum": vandaag,
-            "5": False, "10": False, "15": False, "20": False,
-            "25": False, "30": False, "35": False, "40": False
-        }
-
-    voor_waarden = [5, 10, 15, 20, 25, 30, 35, 40]
-    for waarde in voor_waarden:
-        if wind_kts >= waarde and not status.get(str(waarde), False):
-            verzend_telegrambericht(wind_kts, richting)
-            status[str(waarde)] = True
-
-    with open("status.json", "w") as f:
-        json.dump(status, f, indent=2)
-
-main()
+# === Status opslaan ===
+with open("status.json", "w") as f:
+    json.dump(status, f)
