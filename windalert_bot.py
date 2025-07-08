@@ -25,7 +25,7 @@ def haal_windgegevens_op():
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
-        text = soup.get_text()
+        text = soup.get_text(separator="\n")
 
         # ✅ Wind en windstoten in knopen
         knopen = re.findall(r"(\d+(?:\.\d+)?)\s*knopen", text)
@@ -34,9 +34,15 @@ def haal_windgegevens_op():
         snelheid = round(float(knopen[0]))
         windstoten = round(float(knopen[1]))
 
-        # ✅ Richting uit juiste HTML-element
-        richting_el = soup.find("div", class_="actual__windarrowtext")
-        richting = richting_el.text.strip() if richting_el else "Onbekend"
+        # ✅ Richting: regel vóór "Windpijl"
+        lijnen = text.splitlines()
+        richting = "Onbekend"
+        for i, regel in enumerate(lijnen):
+            if "Windpijl" in regel and i > 0:
+                richting_kandidaat = lijnen[i - 1].strip()
+                if 0 < len(richting_kandidaat) <= 20:
+                    richting = richting_kandidaat
+                break
 
         print(f"✅ Gevonden: {snelheid} knopen, {windstoten} knopen, {richting}")
         return snelheid, windstoten, richting
