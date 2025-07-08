@@ -12,9 +12,17 @@ STATUS_FILE = "status.json"
 
 def haal_windgegevens_op():
     url = "https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse"
-    headers = {"User-Agent": "Mozilla/5.0"}
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/114.0.0.0 Safari/537.36"
+        )
+    }
+
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
         table = soup.find("table", class_="winddata")
         rows = table.find_all("tr")
@@ -27,7 +35,6 @@ def haal_windgegevens_op():
                 val = cols[1].get_text(strip=True)
                 data[key] = val
 
-        # ✅ Gebruik juiste benamingen van de site
         snelheid = int(data.get("wind", "0").replace("knopen", "").strip())
         windstoten = int(data.get("windstoten", str(snelheid)).replace("knopen", "").strip())
         richting = data.get("windrichting", "Onbekend")
@@ -38,7 +45,7 @@ def haal_windgegevens_op():
 
     except Exception as e:
         print(f"❌ Kan geen actuele winddata ophalen: {e}")
-        return None  # Fallback
+        return None
 
 def laad_status():
     if not os.path.exists(STATUS_FILE):
@@ -88,7 +95,6 @@ def verzend_geen_data_bericht():
 def hoofd():
     nu = datetime.now()
 
-    # ✅ Nachtelijke reset tussen 00:00 en 00:14
     if nu.hour == 0 and nu.minute < 15:
         reset_status()
         print("✅ Statusbestand automatisch gereset.")
