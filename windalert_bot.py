@@ -1,81 +1,94 @@
 import requests
-import os
 import json
+import os
 from datetime import datetime
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-KNMI_API_KEY = os.getenv("KNMI_API_KEY")
+WEERLIVE_API_KEY = os.getenv("WEERLIVE_API_KEY")
 
-STATION_ID = 273  # Marknesse
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
+
 STATUS_FILE = "status.json"
 
-# 📁 Statusbestand laden
-if os.path.exists(STATUS_FILE):
-    with open(STATUS_FILE, "r") as f:
-        status = json.load(f)
-else:
-    status = {f"melding_{d}": False for d in DREMPELS}
-
-# 🧭 Windrichting omzetten
-def graden_naar_richting(graden):
+def graden_naar_windrichting(graden):
     richtingen = ['Noord', 'NNO', 'NO', 'ONO', 'Oost', 'OZO', 'ZO', 'ZZO',
                   'Zuid', 'ZZW', 'ZW', 'WZW', 'West', 'WNW', 'NW', 'NNW']
     index = int((graden + 11.25) / 22.5) % 16
     return richtingen[index]
 
-# 🛰️ KNMI actuele data ophalen
 def haal_knmi_data():
-    headers = {
-        "Authorization": f"Bearer {KNMI_API_KEY}",
-        "Accept": "application/json"
-    }
     url = "https://api.dataplatform.knmi.nl/open-data/v1/datasets/actuele10mindata-knmi-stations/versions/2/files"
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    bestanden = response.json()["files"]
+    headers = {"Authorization": f"Bearer {os.getenv('KNMI_API_KEY')}"}
+    params = {"station": "273"}  # Marknesse
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+        bestand_url = response.json()["_embedded"]["files"][-1]["url"]
+        bestand = requests.get(bestand_url)
+        bestand.raise_for_status()
+        regels = bestand.text.splitlines()
+        laatste = regels[-1].split(",")
+        return float(laatste[10]), float(laatste[11]), int(laatste[12])  # wind, stoot, richting
+    except:
+        return None
 
-    laatste_bestand = sorted(bestanden, key=lambda x: x['filename'], reverse=True)[0]['filename']
-    data_url = f"https://api.dataplatform.knmi.nl/open-data/v1/datasets/actuele10mindata-knmi-stations/versions/2/files/{laatste_bestand}/url"
-    url_response = requests.get(data_url, headers=headers).json()
-    download_url = url_response['temporaryDownloadUrl']
+def haal_weerlive_data():
+    url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+    try:
+        data = requests.get(url).json()
+        wind = float(data["liveweer"][0]["windms"]) * 1.94384
+        stoot = float(data["liveweer"][0]["windkmh"]) * 0.539957
+        richting = data["liveweer"][0]["windr"]
+        return wind, stoot, richting
+    except:
+        return None
 
-    csv_data = requests.get(download_url).text
-    for regel in csv_data.splitlines():
-        if regel.startswith(str(STATION_ID)):
-            kolommen = regel.split(',')
-            windsnelheid = round(float(kolommen[6]) * 1.94384)
-            windstoten = round(float(kolommen[7]) * 1.94384)
-            windrichting = graden_naar_richting(float(kolommen[5]))
-            return windsnelheid, windstoten, windrichting
-    return None, None, None
+def laad_status():
+    if os.path.exists(STATUS_FILE):
+        with open(STATUS_FILE) as f:
+            return json.load(f)
+    return {str(d): False for d in DREMPELS}
 
-# 🚨 Telegrammelding
-def stuur_melding(knopen, stoten, richting):
-    tekst = f"💨 *WINDALARM*\nSnelheid: {knopen} knopen\nWindstoten: {stoten} knopen\nRichting: {richting}\n🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+def sla_status_op(status):
+    with open(STATUS_FILE, "w") as f:
+        json.dump(status, f)
+
+def verzend_telegram(wind, stoot, richting):
+    tekst = f"""💨 *WINDALARM*
+Snelheid: {round(wind)} knopen
+Windstoten: {round(stoot)} knopen
+Richting: {richting}
+🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"""
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": tekst,
         "parse_mode": "Markdown"
     }
-    requests.post(url, json=payload)
+    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=payload)
 
-# ✅ Hoofdscript
-windsnelheid, windstoten, richting = haal_knmi_data()
+def main():
+    status = laad_status()
 
-if windsnelheid is not None:
-    print(f"🌬️ Actuele wind: {windsnelheid} knopen | Stoten: {windstoten} | Richting: {richting}")
+    data = haal_knmi_data()
+    if data:
+        wind, stoot, richting_graden = data
+        richting = graden_naar_windrichting(richting_graden)
+    else:
+        data = haal_weerlive_data()
+        if data:
+            wind, stoot, richting = data
+        else:
+            print("Geen gegevens beschikbaar via KNMI of Weerlive")
+            return
+
     for drempel in DREMPELS:
-        key = f"melding_{drempel}"
-        if windsnelheid >= drempel and not status.get(key, False):
-            print(f"🚨 Verstuur melding voor drempel {drempel} knopen")
-            stuur_melding(windsnelheid, windstoten, richting)
-            status[key] = True
-else:
-    print("⚠️ Geen actuele data gevonden voor station 273")
+        if wind >= drempel and not status[str(drempel)]:
+            verzend_telegram(wind, stoot, richting)
+            status[str(drempel)] = True
 
-# 💾 Status opslaan
-with open(STATUS_FILE, "w") as f:
-    json.dump(status, f, indent=2)
+    status["datum"] = datetime.now().strftime("%Y-%m-%d")
+    sla_status_op(status)
+
+if __name__ == "__main__":
+    main()
