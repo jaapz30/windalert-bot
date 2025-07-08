@@ -2,44 +2,34 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Elke 10 minuten
-  workflow_dispatch:         # Handmatige test via GitHub
+    - cron: '30 * * * *'  # Elke 10 minuten
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  run:
     runs-on: ubuntu-latest
-
-    # ✅ Zorgt dat de bot mag pushen naar de repo
-    permissions:
-      contents: write
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      KNMI_API_KEY: ${{ secrets.KNMI_API_KEY }}
+      WEERLIVE_API_KEY: ${{ secrets.WEERLIVE_API_KEY }}
 
     steps:
-    - name: 📥 Repo klonen
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: 🐍 Python installeren
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Install Python & Requests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests
 
-    - name: 📦 Vereisten installeren
-      run: pip install beautifulsoup4 requests
+      - name: Run windalert_bot
+        run: python windalert_bot.py
 
-    - name: 🔐 Secrets instellen als env
-      env:
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: |
-        echo "TELEGRAM_TOKEN=$TELEGRAM_TOKEN" >> $GITHUB_ENV
-        echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID" >> $GITHUB_ENV
-
-    - name: 🚀 Bot uitvoeren
-      run: python windalert_bot.py
-
-    - name: 💾 status.json committen (indien gewijzigd)
-      run: |
-        git config --global user.email "bot@windalert.github"
-        git config --global user.name "Windbot"
-        git add status.json || true
-        git commit -m "⏰ Update status.json" || echo "Niets te committen"
-        git push || echo "Niets om te pushen"
+      - name: Commit status.json (indien gewijzigd)
+        run: |
+          git config --global user.email "bot@windalert.github"
+          git config --global user.name "WindAlert Bot"
+          git add status.json || true
+          git diff --cached --quiet || git commit -m "Update status.json" && git push || echo "Geen wijzigingen"
