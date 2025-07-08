@@ -4,6 +4,7 @@ import datetime
 import os
 from bs4 import BeautifulSoup
 
+# Secrets van GitHub Actions
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -62,11 +63,13 @@ def verzend_telegrambericht(wind, richting):
         'text': bericht,
         'parse_mode': 'Markdown'
     }
-    requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=payload)
+    response = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=payload)
+    print("Telegram response:", response.text)
 
 def main():
     gegevens = haal_windgegevens_op()
     if gegevens is None:
+        print("Geen windgegevens beschikbaar")
         return
 
     wind, windstoten, temperatuur, richting = gegevens
@@ -78,9 +81,12 @@ def main():
     for drempel in sorted(DREMPELS, reverse=True):
         key = f"melding_{drempel}"
         if wind >= drempel and not status.get(key, False):
+            print(f"✅ Drempel {drempel} knopen bereikt. Bericht wordt verzonden.")
             verzend_telegrambericht(wind, richting)
             status[key] = True
             break
+        else:
+            print(f"ℹ️ Drempel {drempel} knopen NIET bereikt of al verzonden.")
 
     sla_status_op(status)
 
