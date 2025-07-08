@@ -15,23 +15,23 @@ def haal_windgegevens_op():
     try:
         response = requests.get(WIND_URL, timeout=10)
         response.raise_for_status()
-    except Exception as e:
-        print(f"Fout bij ophalen winddata: {e}")
-        return None
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    try:
         waarden = soup.find_all('div', class_='actual__value')
         richting_div = soup.find('div', class_='actual__windarrowtext')
+
+        if len(waarden) < 3 or not richting_div:
+            print("❌ Onvoldoende elementen gevonden in HTML")
+            return None
 
         wind = float(waarden[0].text.strip())
         windstoten = float(waarden[1].text.strip())
         temperatuur = float(waarden[2].text.strip())
         richting = richting_div.text.strip()
         return wind, windstoten, temperatuur, richting
+
     except Exception as e:
-        print(f"Fout bij parseren winddata: {e}")
+        print(f"Fout bij ophalen of parseren winddata: {e}")
         return None
 
 def laad_status():
