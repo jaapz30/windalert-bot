@@ -4,9 +4,11 @@ import datetime
 import os
 from bs4 import BeautifulSoup
 
+# Geheime variabelen uit GitHub Secrets
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# Drempelwaardes in knopen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35, 40]
 STATUS_FILE = "status.json"
 WIND_URL = "https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse"
@@ -52,7 +54,7 @@ def reset_status_als_middernacht(status):
 
 def verzend_telegrambericht(wind, richting):
     bericht = (
-        f"💨 *WINDALARM (TEST)*\n"
+        f"💨 *WINDALARM (TESTMODE)*\n"
         f"Snelheid: {wind} knopen\n"
         f"Richting: {richting}\n"
         f"🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
@@ -68,4 +70,30 @@ def verzend_telegrambericht(wind, richting):
 def main():
     gegevens = haal_windgegevens_op()
     if gegevens is None:
-        print("⚠️ Geen windgegev
+        print("⚠️ Geen windgegevens opgehaald.")
+        return
+
+    wind, windstoten, temperatuur, richting = gegevens
+    richting = richting.replace(' - ', '-')
+
+    status = laad_status()
+    status = reset_status_als_middernacht(status)
+
+    for drempel in sorted(DREMPELS, reverse=True):
+        key = f"melding_{drempel}"
+
+        # ⛳ TESTMODE: stuur altijd melding bij eerste niet-verstuurde drempel
+        if not status.get(key, False):
+            print(f"✅ Test: stuur melding voor drempel {drempel}")
+            print(f"Wind: {wind}, Richting: {richting}, Key: {key}")
+            print(f"Chat ID: {TELEGRAM_CHAT_ID}")
+            verzend_telegrambericht(wind, richting)
+            status[key] = True
+            break
+        else:
+            print(f"⏩ Drempel {drempel} al verzonden.")
+
+    sla_status_op(status)
+
+if __name__ == "__main__":
+    main()
