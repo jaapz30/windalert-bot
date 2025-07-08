@@ -27,7 +27,7 @@ def haal_windgegevens_op():
         soup = BeautifulSoup(response.content, "html.parser")
         text = soup.get_text()
 
-        # Zoek alle knopen-waarden
+        # Zoek knopen-waarden
         knopen = re.findall(r"(\d+(?:\.\d+)?)\s*knopen", text)
         richting = re.search(r"(Noord|Zuid|Oost|West|Noord-West|Zuid-Oost|Zuid-West|Noord-Oost)", text)
         temp_match = re.search(r"Temperatuur.*?(-?\d+)\s*°C", text)
@@ -84,4 +84,38 @@ def verzend_geen_data_bericht():
         "Controleer handmatig op storing of wijziging.\n"
         "🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     )
-    url = f"https://api.telegram.org/bot{TEL
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": bericht,
+        "parse_mode": "Markdown"
+    }
+    requests.post(url, data=payload)
+
+def hoofd():
+    nu = datetime.now()
+
+    if nu.hour == 0 and nu.minute < 15:
+        reset_status()
+        print("✅ Statusbestand automatisch gereset.")
+        return
+
+    gegevens = haal_windgegevens_op()
+    if not gegevens:
+        verzend_geen_data_bericht()
+        return
+
+    snelheid, windstoten, richting, temperatuur = gegevens
+    status = laad_status()
+
+    for drempel in DREMPELS:
+        sleutel = f"melding_{drempel}"
+        if snelheid >= drempel and not status.get(sleutel, False):
+            verzend_telegrambericht(snelheid, windstoten, richting, temperatuur)
+            status[sleutel] = True
+            break
+
+    sla_status_op(status)
+
+if __name__ == "__main__":
+    hoofd()
