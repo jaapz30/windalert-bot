@@ -2,26 +2,25 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # Elke 10 minuten
-  workflow_dispatch:        # Handmatig starten mogelijk via GitHub
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🛎️ Repository ophalen
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🐍 Python installeren
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: 📦 Vereisten installeren
+      - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: 💨 Windalarm-script uitvoeren
+      - name: Run windalert script
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
