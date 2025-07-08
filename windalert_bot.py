@@ -1,94 +1,53 @@
 import requests
-import json
 import datetime
 import os
-from bs4 import BeautifulSoup
 
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+API_KEY = os.getenv("KNMI_API_KEY")
+STATION_CODE = "273"  # Marknesse
 
-DREMPELS = [5, 10, 15, 20, 25, 30, 35, 40]
-STATUS_FILE = "status.json"
-WIND_URL = "https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse"
+def haal_knmi_data_op():
+    vandaag = datetime.datetime.utcnow().strftime("%Y%m%d")
+    bestandsnaam = f"K10{vandaag}.csv"
 
-def haal_windgegevens_op():
-    try:
-        response = requests.get(WIND_URL, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
+    print(f"➡️ Bestandsnaam: {bestandsnaam}")
 
-        waarden = soup.find_all('div', class_='actual__value')
-        richting_div = soup.find('div', class_='actual__windarrowtext')
+    url = f"https://api.dataplatform.knmi.nl/open-data/v1/datasets/actuele10mindataKNMI/versions/2.0/files/{bestandsnaam}/url"
+    headers = {"Authorization": f"Bearer {API_KEY}"}
 
-        if len(waarden) < 3 or not richting_div:
-            print("❌ Onvoldoende elementen gevonden in HTML")
-            return None
-
-        wind = float(waarden[0].text.strip())
-        windstoten = float(waarden[1].text.strip())
-        temperatuur = float(waarden[2].text.strip())
-        richting = richting_div.text.strip()
-        return wind, windstoten, temperatuur, richting
-
-    except Exception as e:
-        print(f"Fout bij ophalen of parseren winddata: {e}")
-        return None
-
-def laad_status():
-    if not os.path.exists(STATUS_FILE):
-        return {f"melding_{d}": False for d in DREMPELS}
-    with open(STATUS_FILE, 'r') as f:
-        return json.load(f)
-
-def sla_status_op(status):
-    with open(STATUS_FILE, 'w') as f:
-        json.dump(status, f)
-
-def reset_status_als_middernacht(status):
-    nu = datetime.datetime.now()
-    if nu.hour == 0 and nu.minute < 10:
-        print("🌙 Middernachtdetectie: status.json wordt gereset")
-        return {f"melding_{d}": False for d in DREMPELS}
-    return status
-
-def verzend_telegrambericht(wind, richting):
-    bericht = (
-        f"💨 *WINDALARM*\n"
-        f"Snelheid: {wind} knopen\n"
-        f"Richting: {richting}\n"
-        f"🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
-    )
-    payload = {
-        'chat_id': TELEGRAM_CHAT_ID,
-        'text': bericht,
-        'parse_mode': 'Markdown'
-    }
-    response = requests.post(f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage", data=payload)
-    print("📤 Telegram response:", response.text)
-
-def main():
-    gegevens = haal_windgegevens_op()
-    if gegevens is None:
-        print("⚠️ Geen windgegevens opgehaald.")
+    print(f"📡 Ophalen downloadlink...")
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"❌ Fout bij ophalen link: {response.status_code} - {response.text}")
         return
 
-    wind, windstoten, temperatuur, richting = gegevens
-    richting = richting.replace(' - ', '-')
+    download_url = response.json().get("temporaryDownloadUrl")
+    print("✅ Downloadlink verkregen!")
 
-    status = laad_status()
-    status = reset_status_als_middernacht(status)
+    # CSV-bestand ophalen
+    print("📥 Ophalen CSV-bestand...")
+    csv_response = requests.get(download_url)
+    if csv_response.status_code != 200:
+        print(f"❌ Fout bij downloaden CSV: {csv_response.status_code}")
+        return
 
-    for drempel in sorted(DREMPELS, reverse=True):
-        key = f"melding_{drempel}"
-        if wind >= drempel and not status.get(key, False):
-            print(f"✅ Drempel {drempel} knopen bereikt. Bericht wordt verzonden.")
-            verzend_telegrambericht(wind, richting)
-            status[key] = True
-            break
-        else:
-            print(f"⏩ Drempel {drempel} niet bereikt of al verzonden.")
+    regels = csv_response.text.splitlines()
+    for regel in reversed(regels):  # van nieuwste naar oudste
+        delen = regel.split(",")
+        if delen[0] == STATION_CODE:
+            try:
+                tijd = delen[1]
+                richting = int(delen[3])
+                snelheid = int(delen[4]) / 10  # m/s
+                snelheid_knopen = round(snelheid * 1.94384, 1)
+                print("✅ Laatste meting:")
+                print(f"⏰ Tijd (UTC): {tijd}")
+                print(f"🌬️ Snelheid: {snelheid_knopen} knopen")
+                print(f"🧭 Richting: {richting} graden")
+                return
+            except:
+                continue
 
-    sla_status_op(status)
+    print("⚠️ Geen gegevens gevonden voor station 273")
 
 if __name__ == "__main__":
-    main()
+    haal_knmi_data_op()
