@@ -1,23 +1,59 @@
 import requests
 import json
 import os
-from datetime import datetime
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 # Instellingen
-DREMPELS = [5, 10, 15, 20, 25, 30, 35]  # Pas aan naar wens
-STATUS_FILE = "status.json"
+DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+STATUS_FILE = "status.json"
 
-# Windrichting omzetten van graden naar woorden
-def graden_naar_windrichting(graden):
-    richtingen = ['Noord', 'NNO', 'NO', 'ONO', 'Oost', 'OZO', 'ZO', 'ZZO',
-                  'Zuid', 'ZZW', 'ZW', 'WZW', 'West', 'WNW', 'NW', 'NNW']
-    index = int((graden + 11.25) / 22.5) % 16
-    return richtingen[index]
+def haal_windgegevens_op():
+    url = "https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.content, "html.parser")
+        table = soup.find("table", class_="winddata")
+        rows = table.find_all("tr")
 
-# Standaard windalertbericht
+        data = {}
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) == 2:
+                key = cols[0].get_text(strip=True).lower()
+                val = cols[1].get_text(strip=True)
+                data[key] = val
+
+        # ✅ Gebruik juiste benamingen van de site
+        snelheid = int(data.get("wind", "0").replace("knopen", "").strip())
+        windstoten = int(data.get("windstoten", str(snelheid)).replace("knopen", "").strip())
+        richting = data.get("windrichting", "Onbekend")
+        temperatuur = int(data.get("temperatuur", "0").replace("°c", "").strip())
+
+        print(f"✅ Windverwachting.nl: {snelheid} knopen, gusts {windstoten}, {richting}, {temperatuur}°C")
+        return snelheid, windstoten, richting, temperatuur
+
+    except Exception as e:
+        print(f"❌ Kan geen actuele winddata ophalen: {e}")
+        return None  # Fallback
+
+def laad_status():
+    if not os.path.exists(STATUS_FILE):
+        return {f"melding_{d}": False for d in DREMPELS}
+    with open(STATUS_FILE, "r") as f:
+        return json.load(f)
+
+def sla_status_op(status):
+    with open(STATUS_FILE, "w") as f:
+        json.dump(status, f)
+
+def reset_status():
+    status = {f"melding_{d}": False for d in DREMPELS}
+    sla_status_op(status)
+
 def verzend_telegrambericht(snelheid, windstoten, richting, temperatuur):
     bericht = (
         "💨 *SWA WINDALERT*\n"
@@ -34,11 +70,10 @@ def verzend_telegrambericht(snelheid, windstoten, richting, temperatuur):
     }
     requests.post(url, data=payload)
 
-# Melding als er geen data beschikbaar is
-def verzend_telegram_foutmelding():
+def verzend_geen_data_bericht():
     bericht = (
         "⚠️ *SWA WINDALERT*\n"
-        "Er is geen actuele winddata beschikbaar van KNMI of Windfinder.\n"
+        "Er is op dit moment geen actuele winddata beschikbaar van Windverwachting.nl.\n"
         "Controleer handmatig op storing of wijziging.\n"
         "🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     )
@@ -50,86 +85,21 @@ def verzend_telegram_foutmelding():
     }
     requests.post(url, data=payload)
 
-# Data ophalen: eerst KNMI, anders Windfinder
-def haal_windgegevens_op():
-    # 🔹 KNMI proberen
-    try:
-        url = "https://api.dataplatform.knmi.nl/open-data/v1/datasets/actuele10mindataKNMIstations/versions/2/files"
-        headers = { "Authorization": "APIKey 4ee734442fcf56855889e78e58e5d874" }
-        response = requests.get(url, headers=headers)
-        files = response.json().get("files", [])
-        if not files:
-            raise Exception("Geen KNMI-bestanden")
-
-        latest_file = files[0]["filename"]
-        file_url = f"{url}/{latest_file}/url"
-        download_url = requests.get(file_url, headers=headers).json()["temporaryDownloadUrl"]
-        bestand = requests.get(download_url).text
-
-        for regel in bestand.splitlines():
-            if regel.startswith("275"):
-                velden = regel.split(",")
-                snelheid_ms = float(velden[9]) / 10
-                windstoot_ms = float(velden[10]) / 10
-                richting_graden = int(velden[11])
-                temperatuur = float(velden[6]) / 10
-                snelheid = round(snelheid_ms * 1.94384)
-                windstoot = round(windstoot_ms * 1.94384)
-                richting = graden_naar_windrichting(richting_graden)
-                return snelheid, windstoot, richting, round(temperatuur)
-        raise Exception("Geen data voor station 275")
-    except Exception:
-        pass
-
-    # 🔸 Windfinder fallback
-    try:
-        url = "https://www.windfinder.com/weatherforecast/schokkerhaven"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        wind_el = soup.select_one("div.actual__wind")
-        snelheid = int(wind_el.select_one("span.speed").text.strip().replace("kt", "").strip())
-        gust_el = wind_el.select_one("span.gusts")
-        gust_txt = gust_el.text.strip().replace("Gusts", "").replace("kt", "").strip()
-        windstoot = int(gust_txt) if gust_txt else snelheid
-        temperatuur = int(soup.select_one("span.actual__temperature").text.strip().replace("°C", "").strip())
-        richting = wind_el.select_one("span.dir").text.strip()
-
-        return snelheid, windstoot, richting, temperatuur
-    except Exception:
-        return None  # Als beide bronnen falen
-
-# Status laden
-def laad_status():
-    if not os.path.exists(STATUS_FILE):
-        return {f"melding_{d}": False for d in DREMPELS}
-    with open(STATUS_FILE, "r") as f:
-        return json.load(f)
-
-# Status opslaan
-def sla_status_op(status):
-    with open(STATUS_FILE, "w") as f:
-        json.dump(status, f)
-
-# Status resetten
-def reset_status():
-    status = {f"melding_{d}": False for d in DREMPELS}
-    sla_status_op(status)
-
-# Hoofdfunctie
 def hoofd():
     nu = datetime.now()
+
+    # ✅ Nachtelijke reset tussen 00:00 en 00:14
     if nu.hour == 0 and nu.minute < 15:
         reset_status()
+        print("✅ Statusbestand automatisch gereset.")
         return
 
-    data = haal_windgegevens_op()
-    if not data:
-        verzend_telegram_foutmelding()
+    gegevens = haal_windgegevens_op()
+    if not gegevens:
+        verzend_geen_data_bericht()
         return
 
-    snelheid, windstoten, richting, temperatuur = data
+    snelheid, windstoten, richting, temperatuur = gegevens
     status = laad_status()
 
     for drempel in DREMPELS:
@@ -141,6 +111,5 @@ def hoofd():
 
     sla_status_op(status)
 
-# Startscript
 if __name__ == "__main__":
     hoofd()
