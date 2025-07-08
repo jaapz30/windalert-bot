@@ -4,17 +4,14 @@ import datetime
 import os
 from bs4 import BeautifulSoup
 
-# Milieuvriendelijke manier om geheimen te laden
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# Instellingen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35, 40]
 STATUS_FILE = "status.json"
 WIND_URL = "https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse"
 
 def haal_windgegevens_op():
-    """Scrap winddata van windverwachting.nl"""
     try:
         response = requests.get(WIND_URL, timeout=10)
         response.raise_for_status()
@@ -39,7 +36,7 @@ def haal_windgegevens_op():
 
 def laad_status():
     if not os.path.exists(STATUS_FILE):
-        return {str(d): False for d in DREMPELS}
+        return {f"melding_{d}": False for d in DREMPELS}
     with open(STATUS_FILE, 'r') as f:
         return json.load(f)
 
@@ -50,7 +47,7 @@ def sla_status_op(status):
 def reset_status_als_middernacht(status):
     nu = datetime.datetime.now()
     if nu.hour == 0 and nu.minute < 10:
-        return {str(d): False for d in DREMPELS}
+        return {f"melding_{d}": False for d in DREMPELS}
     return status
 
 def verzend_telegrambericht(wind, richting):
@@ -79,10 +76,11 @@ def main():
     status = reset_status_als_middernacht(status)
 
     for drempel in sorted(DREMPELS, reverse=True):
-        if wind >= drempel and not status[str(drempel)]:
+        key = f"melding_{drempel}"
+        if wind >= drempel and not status.get(key, False):
             verzend_telegrambericht(wind, richting)
-            status[str(drempel)] = True
-            break  # Alleen de hoogste drempel per run
+            status[key] = True
+            break
 
     sla_status_op(status)
 
