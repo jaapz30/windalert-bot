@@ -1,4 +1,4 @@
-name: Test KNMI API
+name: ✅ Test KNMI Open Data API
 
 on:
   workflow_dispatch:
