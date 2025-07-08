@@ -27,21 +27,19 @@ def haal_windgegevens_op():
         soup = BeautifulSoup(response.content, "html.parser")
         text = soup.get_text()
 
-        # Zoek knopen-waarden
+        # ✅ Wind en windstoten in knopen
         knopen = re.findall(r"(\d+(?:\.\d+)?)\s*knopen", text)
-        richting = re.search(r"(Noord|Zuid|Oost|West|Noord-West|Zuid-Oost|Zuid-West|Noord-Oost)", text)
-        temp_match = re.search(r"Temperatuur.*?(-?\d+)\s*°C", text)
-
         if len(knopen) < 2:
             raise ValueError("Niet genoeg knopenwaarden gevonden")
-
         snelheid = round(float(knopen[0]))
         windstoten = round(float(knopen[1]))
-        richting = richting.group(0) if richting else "Onbekend"
-        temperatuur = int(temp_match.group(1)) if temp_match else 0
 
-        print(f"✅ Gevonden: {snelheid} knopen, {windstoten} knopen, {richting}, {temperatuur}°C")
-        return snelheid, windstoten, richting, temperatuur
+        # ✅ Richting uit juiste HTML-element
+        richting_el = soup.find("div", class_="actual__windarrowtext")
+        richting = richting_el.text.strip() if richting_el else "Onbekend"
+
+        print(f"✅ Gevonden: {snelheid} knopen, {windstoten} knopen, {richting}")
+        return snelheid, windstoten, richting
 
     except Exception as e:
         print(f"❌ Data ophalen mislukt: {e}")
@@ -61,12 +59,11 @@ def reset_status():
     status = {f"melding_{d}": False for d in DREMPELS}
     sla_status_op(status)
 
-def verzend_telegrambericht(snelheid, windstoten, richting, temperatuur):
+def verzend_telegrambericht(snelheid, windstoten, richting):
     bericht = (
         "💨 *SWA WINDALERT*\n"
         f"🌬️ Wind: {snelheid} knopen ({richting})\n"
         f"🌪️ Windstoten: {windstoten} knopen\n"
-        f"🌡️ Temperatuur: {temperatuur} °C\n"
         "🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
     )
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -105,13 +102,13 @@ def hoofd():
         verzend_geen_data_bericht()
         return
 
-    snelheid, windstoten, richting, temperatuur = gegevens
+    snelheid, windstoten, richting = gegevens
     status = laad_status()
 
     for drempel in DREMPELS:
         sleutel = f"melding_{drempel}"
         if snelheid >= drempel and not status.get(sleutel, False):
-            verzend_telegrambericht(snelheid, windstoten, richting, temperatuur)
+            verzend_telegrambericht(snelheid, windstoten, richting)
             status[sleutel] = True
             break
 
