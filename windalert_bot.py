@@ -53,4 +53,4 @@ def verzend_telegrambericht(wind_kts, richting):
 
     try:
         requests.post(url, json=payload)
-    except Exception
+    except Exception: 
