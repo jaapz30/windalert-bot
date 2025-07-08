@@ -8,6 +8,7 @@ on:
 jobs:
   run-script:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -19,6 +20,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Download status.json artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: status-file
+          path: .
 
       - name: Run windalert bot
         run: python windalert_bot.py
