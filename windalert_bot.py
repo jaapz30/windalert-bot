@@ -34,14 +34,16 @@ def haal_windgegevens_op():
         snelheid = round(float(knopen[0]))
         windstoten = round(float(knopen[1]))
 
-        # ✅ Richting: regel vóór "Windpijl"
+        # ✅ Windrichting vinden: tussen 'Wind' en 'Windstoten'
         lijnen = text.splitlines()
         richting = "Onbekend"
         for i, regel in enumerate(lijnen):
-            if "Windpijl" in regel and i > 0:
-                richting_kandidaat = lijnen[i - 1].strip()
-                if 0 < len(richting_kandidaat) <= 20:
-                    richting = richting_kandidaat
+            if "Wind" in regel and "beaufort" in regel:
+                # Richting staat meestal 1-2 regels verder
+                for j in range(i+1, i+4):
+                    if re.match(r"^[A-Z][a-z\-]+(?:\s+[A-Z][a-z\-]+)?$", lijnen[j]):
+                        richting = lijnen[j].strip()
+                        break
                 break
 
         print(f"✅ Gevonden: {snelheid} knopen, {windstoten} knopen, {richting}")
