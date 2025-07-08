@@ -1,0 +1,23 @@
+name: Test KNMI API
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-knmi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo klonen
+        uses: actions/checkout@v3
+
+      - name: Python installeren
+        uses: actions/setup-python@v4
+
+      - name: Vereisten installeren
+        run: pip install requests
+
+      - name: Secrets instellen
+        run: echo "KNMI_API_KEY=${{ secrets.KNMI_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Script uitvoeren
+        run: python knmi_test.py
