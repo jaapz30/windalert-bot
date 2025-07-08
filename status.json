@@ -1,11 +1,9 @@
 {
-  "datum": "2025-07-07",
-  "5": false,
-  "10": false,
-  "15": false,
-  "20": false,
-  "25": false,
-  "30": false,
-  "35": false,
-  "40": false
+  "melding_5": false,
+  "melding_10": false,
+  "melding_15": false,
+  "melding_20": false,
+  "melding_25": false,
+  "melding_30": false,
+  "melding_35": false
 }
