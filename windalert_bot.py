@@ -3,38 +3,48 @@ import json
 import os
 from datetime import datetime
 
-# Ingevoerde drempels in knopen
+# Drempels in knopen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
-# Windrichting omzetten naar woorden
+# Windrichting omzetten naar tekst
 def graden_naar_richting(graden):
     richtingen = ['Noord', 'NO', 'Oost', 'ZO', 'Zuid', 'ZW', 'West', 'NW']
     index = int((graden + 22.5) % 360 / 45)
     return richtingen[index]
 
-# Data ophalen van Open-Meteo
+# Windgegevens ophalen
 def haal_wind_data_op():
     url = "https://api.open-meteo.com/v1/forecast?latitude=52.65&longitude=5.38&current=wind_speed_10m,wind_direction_10m"
     response = requests.get(url)
     data = response.json()
-    snelheid = round(data['current']['wind_speed_10m'] * 1.94384)  # m/s → knopen
+    snelheid = round(data['current']['wind_speed_10m'] * 1.94384)  # m/s naar knopen
     richting = graden_naar_richting(data['current']['wind_direction_10m'])
     return snelheid, richting
 
-# Status.json laden
+# Statusbestand laden of herstellen
 def laad_status():
+    status = {}
     try:
         with open("status.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {f"melding_{d}": False for d in DREMPELS}
+            status = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        print("Let op: status.json ontbrak of was beschadigd. Nieuw bestand wordt aangemaakt.")
+        status = {}
 
-# Status.json opslaan
+    # Ontbrekende drempels aanvullen
+    for d in DREMPELS:
+        sleutel = f"melding_{d}"
+        if sleutel not in status:
+            status[sleutel] = False
+
+    return status
+
+# Statusbestand opslaan
 def sla_status_op(status):
     with open("status.json", "w") as f:
         json.dump(status, f)
 
-# Telegrambericht versturen
+# Bericht sturen via Telegram
 def verzend_telegrambericht(wind_kts, richting):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
@@ -72,5 +82,6 @@ def main():
 
     sla_status_op(status)
 
+# Script starten
 if __name__ == "__main__":
     main()
