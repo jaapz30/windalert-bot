@@ -34,14 +34,15 @@ def haal_windgegevens_op():
         snelheid = round(float(knopen[0]))
         windstoten = round(float(knopen[1]))
 
-        # ✅ Windrichting uit bekende lijst zoeken
+        # ✅ Richting zoeken (bijv. Noord-West, Zuid-Oost, etc.)
         richtingen_lijst = [
-            "Noord", "Noord-Oost", "Oost", "Zuid-Oost", "Zuid", "Zuid-West", "West", "Noord-West"
+            "Noord", "Noord-Oost", "Oost", "Zuid-Oost",
+            "Zuid", "Zuid-West", "West", "Noord-West"
         ]
         richting = "Onbekend"
         for regel in text.splitlines():
             for r in richtingen_lijst:
-                if r.lower() in regel.lower():
+                if re.fullmatch(r"\s*" + re.escape(r) + r"\s*", regel.strip(), flags=re.IGNORECASE):
                     richting = r
                     break
             if richting != "Onbekend":
