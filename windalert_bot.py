@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 
+# Instellingen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -23,12 +24,22 @@ def haal_windgegevens_op():
     )
     response = requests.get(url)
     data = response.json()
-    current = data["current"]
-    snelheid = round(current["wind_speed_10m"] * 1.94384)        # m/s → knopen
-    windstoten = round(current["wind_gusts_10m"] * 1.94384)      # m/s → knopen
-    richting = graden_naar_windrichting(current["wind_direction_10m"])
-    temperatuur = round(current["temperature_2m"])
-    return snelheid, windstoten, richting, temperatuur
+    current = data.get("current", {})
+
+    # Haal data op met fallback naar 0 als het ontbreekt
+    snelheid_ms = current.get("wind_speed_10m", 0) or 0
+    windstoten_ms = current.get("wind_gusts_10m", 0) or 0
+    richting_graden = current.get("wind_direction_10m", 0) or 0
+    temperatuur = current.get("temperature_2m", 0) or 0
+
+    snelheid = round(snelheid_ms * 1.94384)
+    windstoten = round(windstoten_ms * 1.94384)
+    richting = graden_naar_windrichting(richting_graden)
+
+    # Debug output
+    print(f"API wind m/s: {snelheid_ms}, windstoten m/s: {windstoten_ms}, richting: {richting_graden}")
+
+    return snelheid, windstoten, richting, round(temperatuur)
 
 def laad_status():
     if not os.path.exists(STATUS_FILE):
@@ -59,17 +70,19 @@ def verzend_telegrambericht(snelheid, windstoten, richting, temperatuur):
         "parse_mode": "Markdown"
     }
     response = requests.post(url, data=payload)
-    print("Verzendbericht:", response.status_code, response.text)
+    print("Telegram respons:", response.status_code, response.text)
 
 def hoofd():
     nu = datetime.now()
+
+    # Nachtelijke reset tussen 00:00 en 00:14
     if nu.hour == 0 and nu.minute < 15:
         reset_status()
         print("Statusbestand automatisch gereset.")
         return
 
     snelheid, windstoten, richting, temperatuur = haal_windgegevens_op()
-    print(f"Wind: {snelheid} knopen, Windstoten: {windstoten}, Richting: {richting}, Temp: {temperatuur}°C")
+    print(f"Actuele wind: {snelheid} knopen, Windstoten: {windstoten}, Richting: {richting}, Temp: {temperatuur}°C")
 
     status = laad_status()
 
