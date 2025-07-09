@@ -9,26 +9,19 @@ WEERLIVE_API_KEY = os.getenv("WEERLIVE_API_KEY")
 
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
-def graden_naar_windrichting(graden):
-    richtingen = ['Noord', 'NNO', 'NO', 'ONO', 'Oost', 'OZO', 'ZO', 'ZZO',
-                  'Zuid', 'ZZW', 'ZW', 'WZW', 'West', 'WNW', 'NW', 'NNW']
-    index = int((graden + 11.25) / 22.5) % 16
-    return richtingen[index]
-
-# Actuele wind uit Weerlive.nl API (station Marknesse = "Marknesse")
 def haal_weerlive_data():
     try:
         url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
         data = requests.get(url).json()
-        wind = float(data["liveweer"][0]["windr"])
-        richting = data["liveweer"][0]["windr"]  # Windrichting in tekst, zoals 'ZW'
-        wind_knopen = round(float(data["liveweer"][0]["winds"]) * 0.54, 1)  # m/s naar knopen
+        live = data["liveweer"][0]
+        wind_m_s = float(live["winds"])  # winds = wind in m/s
+        wind_knopen = round(wind_m_s * 1.94384, 1)  # m/s naar knopen
+        richting = live["windr"]  # windrichting als tekst, bv. 'ZW'
         return wind_knopen, richting
     except Exception as e:
         print("Fout bij ophalen Weerlive:", e)
         return None, None
 
-# Windstoot uit Open-Meteo (ICON D2)
 def haal_windstoot_openmeteo():
     try:
         url = "https://api.open-meteo.com/v1/dwd-icon?latitude=52.7&longitude=5.9&current=wind_gusts_10m&windspeed_unit=kn"
