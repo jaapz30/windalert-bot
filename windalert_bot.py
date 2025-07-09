@@ -5,6 +5,7 @@ from datetime import datetime
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+WEERLIVE_API_KEY = os.getenv("WEERLIVE_API_KEY")
 
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
@@ -14,29 +15,21 @@ def graden_naar_windrichting(graden):
     index = int((graden + 11.25) / 22.5) % 16
     return richtingen[index]
 
-def haal_wind_knmi():
+# Actuele wind uit Weerlive.nl API (station Marknesse = "Marknesse")
+def haal_weerlive_data():
     try:
-        response = requests.get("https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse", headers={"User-Agent": "Mozilla/5.0"})
-        html = response.text
-
-        # Probeer gemeten wind uit HTML te halen
-        if 'Gemeten wind' not in html:
-            raise ValueError("Gemeten wind niet gevonden")
-
-        windstuk = html.split('Gemeten wind')[1].split('knopen')[0].split('>')[-1].strip()
-        wind = float(windstuk)
-
-        if 'actual__windarrowtext">' not in html:
-            raise ValueError("Windrichting niet gevonden")
-
-        richting = html.split('actual__windarrowtext">')[1].split('</div>')[0].strip()
-        return wind, richting
-
+        url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+        data = requests.get(url).json()
+        wind = float(data["liveweer"][0]["windr"])
+        richting = data["liveweer"][0]["windr"]  # Windrichting in tekst, zoals 'ZW'
+        wind_knopen = round(float(data["liveweer"][0]["winds"]) * 0.54, 1)  # m/s naar knopen
+        return wind_knopen, richting
     except Exception as e:
-        print(f"Fout bij ophalen KNMI: {e}")
+        print("Fout bij ophalen Weerlive:", e)
         return None, None
 
-def haal_windstoot_fallback():
+# Windstoot uit Open-Meteo (ICON D2)
+def haal_windstoot_openmeteo():
     try:
         url = "https://api.open-meteo.com/v1/dwd-icon?latitude=52.7&longitude=5.9&current=wind_gusts_10m&windspeed_unit=kn"
         data = requests.get(url).json()
@@ -70,8 +63,8 @@ def main():
         for d in DREMPELS:
             status[str(d)] = False
 
-    wind, richting = haal_wind_knmi()
-    windstoot = haal_windstoot_fallback()
+    wind, richting = haal_weerlive_data()
+    windstoot = haal_windstoot_openmeteo()
     if not wind or not richting or not windstoot:
         print("Geen volledige data beschikbaar.")
         return
