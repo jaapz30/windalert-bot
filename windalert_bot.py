@@ -18,11 +18,22 @@ def haal_wind_knmi():
     try:
         response = requests.get("https://windverwachting.nl/actuele-wind.php?plaatsnaam=Marknesse", headers={"User-Agent": "Mozilla/5.0"})
         html = response.text
-        wind = float(html.split('Gemeten wind')[1].split('knopen')[0].split('>')[-1].strip())
+
+        # Probeer gemeten wind uit HTML te halen
+        if 'Gemeten wind' not in html:
+            raise ValueError("Gemeten wind niet gevonden")
+
+        windstuk = html.split('Gemeten wind')[1].split('knopen')[0].split('>')[-1].strip()
+        wind = float(windstuk)
+
+        if 'actual__windarrowtext">' not in html:
+            raise ValueError("Windrichting niet gevonden")
+
         richting = html.split('actual__windarrowtext">')[1].split('</div>')[0].strip()
         return wind, richting
+
     except Exception as e:
-        print("Fout bij ophalen KNMI:", e)
+        print(f"Fout bij ophalen KNMI: {e}")
         return None, None
 
 def haal_windstoot_fallback():
