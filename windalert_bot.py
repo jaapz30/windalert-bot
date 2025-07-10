@@ -11,7 +11,7 @@ DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
 def haal_weerlive_data():
     try:
-        url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+        url = f"https://weerlive.nl/api/json-data-10min.php?key={98a8e75e}&locatie=Marknesse"
         data = requests.get(url).json()
         live = data["liveweer"][0]
         wind_m_s = float(live["winds"])  # winds = wind in m/s
