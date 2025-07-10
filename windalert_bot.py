@@ -12,9 +12,10 @@ DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
 def haal_weerlive_data():
     try:
-        # ✅ Directe link met vaste API-key
-        url = "https://weerlive.nl/api/json-data-10min.php?key=98a8e75e&locatie=Marknesse"
+        # ✅ Directe link met JOUW nieuwe API-key
+        url = "https://weerlive.nl/api/json-data-10min.php?key=320a946057&locatie=Marknesse"
         response = requests.get(url)
+        print("Weerlive status:", response.status_code)  # debugregel
         data = response.json()
         live = data["liveweer"][0]
         wind_m_s = float(live["winds"])  # wind in m/s
