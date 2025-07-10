@@ -3,20 +3,23 @@ import json
 import os
 from datetime import datetime
 
+# 🔧 Configuratie (vaste API-gegevens)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-WEERLIVE_API_KEY = os.getenv("WEERLIVE_API_KEY")
+WEERLIVE_API_KEY = "98a8e75e"  # ✅ HIER staat de juiste API-key als string
 
+# 🟨 Drempels in knopen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
 def haal_weerlive_data():
     try:
-        url = f"https://weerlive.nl/api/json-data-10min.php?key={98a8e75e}&locatie=Marknesse"
-        data = requests.get(url).json()
+        url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+        response = requests.get(url)
+        data = response.json()
         live = data["liveweer"][0]
-        wind_m_s = float(live["winds"])  # winds = wind in m/s
-        wind_knopen = round(wind_m_s * 1.94384, 1)  # m/s naar knopen
-        richting = live["windr"]  # windrichting als tekst, bv. 'ZW'
+        wind_m_s = float(live["winds"])  # wind in m/s
+        wind_knopen = round(wind_m_s * 1.94384, 1)
+        richting = live["windr"]  # bv. 'NO'
         return wind_knopen, richting
     except Exception as e:
         print("Fout bij ophalen Weerlive:", e)
@@ -25,7 +28,8 @@ def haal_weerlive_data():
 def haal_windstoot_openmeteo():
     try:
         url = "https://api.open-meteo.com/v1/dwd-icon?latitude=52.7&longitude=5.9&current=wind_gusts_10m&windspeed_unit=kn"
-        data = requests.get(url).json()
+        response = requests.get(url)
+        data = response.json()
         return round(data["current"]["wind_gusts_10m"], 1)
     except Exception as e:
         print("Fout bij ophalen windstoot:", e)
@@ -37,19 +41,27 @@ Snelheid: {knopen} knopen
 Richting: {richting}
 🌪️ Windstoten: {windstoot} knopen
 🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"""
-    requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-        json={
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": bericht,
-            "parse_mode": "Markdown"
-        }
-    )
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": bericht,
+                "parse_mode": "Markdown"
+            }
+        )
+        print("✅ Telegrambericht verzonden.")
+    except Exception as e:
+        print("Fout bij verzenden Telegram:", e)
 
 def main():
     today = datetime.now().strftime("%Y-%m-%d")
-    with open("status.json", "r") as f:
-        status = json.load(f)
+
+    try:
+        with open("status.json", "r") as f:
+            status = json.load(f)
+    except:
+        status = {}
 
     if status.get("datum") != today:
         status = {"datum": today}
@@ -58,8 +70,9 @@ def main():
 
     wind, richting = haal_weerlive_data()
     windstoot = haal_windstoot_openmeteo()
-    if not wind or not richting or not windstoot:
-        print("Geen volledige data beschikbaar.")
+
+    if wind is None or richting is None or windstoot is None:
+        print("❌ Geen volledige data beschikbaar.")
         return
 
     for drempel in DREMPELS:
