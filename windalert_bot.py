@@ -3,17 +3,17 @@ import json
 import os
 from datetime import datetime
 
-# 🔧 Configuratie (vaste API-gegevens)
+# 🔐 Telegramconfiguratie uit GitHub Secrets
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-WEERLIVE_API_KEY = "98a8e75e"  # ✅ HIER staat de juiste API-key als string
 
 # 🟨 Drempels in knopen
 DREMPELS = [5, 10, 15, 20, 25, 30, 35]
 
 def haal_weerlive_data():
     try:
-        url = f"https://weerlive.nl/api/json-data-10min.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+        # ✅ Directe link met vaste API-key
+        url = "https://weerlive.nl/api/json-data-10min.php?key=98a8e75e&locatie=Marknesse"
         response = requests.get(url)
         data = response.json()
         live = data["liveweer"][0]
