@@ -12,6 +12,7 @@ jobs:
     env:
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      WEERLIVE_API_KEY: ${{ secrets.WEERLIVE_API_KEY }}
 
     steps:
       - name: 📥 Checkout repository
