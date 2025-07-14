@@ -57,9 +57,15 @@ def get_actuele_wind():
         print("❌ Fout bij ophalen data:", e)
         return None, None, None
 
-# 📩 Telegrambericht sturen
-def stuur_telegram(wind, richting):
-    bericht = f"💨 *WINDALARM*\nSnelheid: {wind} knopen\nRichting: {richting}\n🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+# 📩 Telegrambericht sturen (nu met gust)
+def stuur_telegram(wind, gust, richting):
+    bericht = (
+        f"💨 *WINDALARM*\n"
+        f"Snelheid: {wind} knopen\n"
+        f"Windstoot: {gust} knopen\n"
+        f"Richting: {richting}\n"
+        f"🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
+    )
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -103,7 +109,7 @@ def main():
     for drempel in DREMPELS:
         if wind >= drempel and not status.get(str(drempel), False):
             print(f"✅ Drempel {drempel} knopen overschreden ({wind}). Bericht sturen.")
-            stuur_telegram(wind, richting)
+            stuur_telegram(wind, gust, richting)
             status[str(drempel)] = True
 
     save_status(status)
