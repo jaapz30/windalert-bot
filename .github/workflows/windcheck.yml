@@ -2,8 +2,8 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # 🔁 Elke 10 minuten automatisch runnen
-  workflow_dispatch:        # 🖱️ Handmatig starten via GitHub
+    - cron: '*/10 * * * *'  # 🔁 Elke 10 minuten automatisch uitvoeren
+  workflow_dispatch:        # 🖱️ Handmatig starten via GitHub UI
 
 jobs:
   run-windalert:
@@ -15,16 +15,16 @@ jobs:
       WEERLIVE_API_KEY: ${{ secrets.WEERLIVE_API_KEY }}
 
     steps:
-      - name: 📥 Checkout repository
+      - name: 📥 Repository ophalen
         uses: actions/checkout@v3
 
-      - name: 🐍 Setup Python
+      - name: 🐍 Python installeren
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name: 📦 Benodigde packages installeren
         run: pip install requests
 
-      - name: ▶️ Run windalert script
+      - name: ▶️ Windalarm script uitvoeren
         run: python windalert_bot.py
