@@ -3,61 +3,41 @@ import json
 import datetime
 import os
 
-# 📌 CONFIG
-WEERLIVE_API_KEY = os.environ.get("WEERLIVE_API_KEY")
+# CONFIGURATIE
+WEERLIVE_API_KEY = os.environ.get("WEERLIVE_API_KEY")  # Zet dit als secret
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
-
-LAT = 52.613
-LON = 5.747
-TZ = "Europe/Amsterdam"
-LOCATIE = "Lelystad"
 
 DREMPELS = [2, 5, 10, 15, 20, 25, 30, 35]
 STATUS_FILE = "status.json"
 
-# 🧭 Graden naar windrichting
+# Hulpfunctie: graden naar windrichting
 def graden_naar_richting(graden):
     richtingen = ['N', 'NO', 'O', 'ZO', 'Z', 'ZW', 'W', 'NW']
     index = round(graden / 45) % 8
     return richtingen[index]
 
-# 🌬️ Winddata ophalen
+# Live wind ophalen van WeerLive en Open-Meteo
 def get_actuele_wind():
     try:
-        # URLs
-        wl_url = f"https://weerlive.nl/api/weerlive_api_v2.php?key={WEERLIVE_API_KEY}&locatie={LOCATIE}"
-        om_url = (
-            f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}"
-            f"&current_weather=true&hourly=wind_gusts_10m&wind_speed_unit=kn&forecast_hours=1&timezone={TZ}"
-        )
+        wl_url = f"https://weerlive.nl/api/weerlive_api_v2.php?key={WEERLIVE_API_KEY}&locatie=Marknesse"
+        om_url = "https://api.open-meteo.com/v1/forecast?latitude=52.613&longitude=5.747&current_weather=true&hourly=wind_gusts_10m&wind_speed_unit=kn&forecast_hours=1&timezone=Europe/Amsterdam"
 
         wl_data = requests.get(wl_url).json()
         om_data = requests.get(om_url).json()
 
-        # WeerLive: wind & gust
         live = wl_data["liveweer"][0]
-        wind = round(float(live.get("windknp", 0)))
-        gust = round(float(live.get("windknpmax", 0)))
+        wind = round(float(live["windknp"]))
+        gust = round(float(live.get("windknpmax") or om_data["hourly"]["wind_gusts_10m"][0]))
+        richting = graden_naar_richting(om_data["current_weather"]["winddirection"])
 
-        # Open-Meteo: windrichting
-        richting_graden = om_data["current_weather"]["winddirection"]
-        richting = graden_naar_richting(richting_graden)
-
-        # Fallbacks
-        if gust == 0:
-            gust = round(om_data["hourly"]["wind_gusts_10m"][0])
-        if wind == 0:
-            wind = round(om_data["current_weather"]["windspeed"])
-
-        print(f"🌬️ Wind: {wind} knopen | Gust: {gust} | Richting: {richting}")
+        print(f"🌬️ Huidige wind: {wind} kn, gust: {gust} kn, richting: {richting}")
         return wind, gust, richting
-
     except Exception as e:
         print("❌ Fout bij ophalen data:", e)
         return None, None, None
 
-# 📩 Telegrambericht sturen (nu met gust)
+# Bericht sturen via Telegram
 def stuur_telegram(wind, gust, richting):
     bericht = (
         f"💨 *WINDALARM*\n"
@@ -75,27 +55,29 @@ def stuur_telegram(wind, gust, richting):
     response = requests.post(url, data=payload)
     print("📤 Telegram verzonden:", response.text)
 
-# 📁 Statusbestand inladen
+# Laad of initialiseer status.json
 def load_status():
     if not os.path.exists(STATUS_FILE):
+        print("📄 status.json nog niet aanwezig, maken...")
         return {str(d): False for d in DREMPELS} | {"datum": str(datetime.date.today())}
     with open(STATUS_FILE, "r") as f:
         return json.load(f)
 
-# 💾 Statusbestand opslaan
+# Sla status.json op
 def save_status(status):
     with open(STATUS_FILE, "w") as f:
         json.dump(status, f, indent=2)
+        print("💾 status.json opgeslagen")
 
-# 🔄 Status resetten als dag veranderd is
+# Reset bij nieuwe dag
 def reset_status(status):
     vandaag = str(datetime.date.today())
     if status.get("datum") != vandaag:
-        print("🔄 Nieuwe dag: reset status.json")
+        print("🔁 Nieuwe dag - status reset")
         return {str(d): False for d in DREMPELS} | {"datum": vandaag}
     return status
 
-# 🚀 Hoofdprogramma
+# Hoofdscript
 def main():
     print("🚀 Script gestart")
     wind, gust, richting = get_actuele_wind()
@@ -108,11 +90,4 @@ def main():
 
     for drempel in DREMPELS:
         if wind >= drempel and not status.get(str(drempel), False):
-            print(f"✅ Drempel {drempel} knopen overschreden ({wind}). Bericht sturen.")
-            stuur_telegram(wind, gust, richting)
-            status[str(drempel)] = True
-
-    save_status(status)
-
-if __name__ == "__main__":
-    main()
+            print(f"✅ Drempel {drempel} overschreden
