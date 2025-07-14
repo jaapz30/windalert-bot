@@ -90,4 +90,5 @@ def main():
 
     for drempel in DREMPELS:
         if wind >= drempel and not status.get(str(drempel), False):
-            print(f"✅ Drempel {drempel} overschreden
+            print(f"✅ Drempel {drempel} overschreden")
+
