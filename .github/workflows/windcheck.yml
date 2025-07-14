@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📦 Benodigde packages installeren
+      - name: 📦 Vereisten installeren
         run: pip install requests
 
-      - name: ▶️ Windalarm script uitvoeren
+      - name: ▶️ Voer windalert script uit
         run: python windalert_bot.py
