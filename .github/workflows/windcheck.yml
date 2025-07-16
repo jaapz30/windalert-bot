@@ -1,9 +1,9 @@
-name: Windalert Renesse met fallback
+name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '0 */1 * * *'  # ⏱️ Elk uur
-  workflow_dispatch:       # 👈 Handmatige testrun mogelijk
+    - cron: '0 * * * *'           # 🕒 Elke 60 minuten (GitHub draait op UTC)
+  workflow_dispatch:              # 🖱️ Handmatig starten via GitHub UI
 
 jobs:
   run-windalert:
@@ -25,7 +25,7 @@ jobs:
           python-version: '3.11'
 
       - name: 📦 Install dependencies
-        run: pip install requests
+        run: pip install requests pytz
 
-      - name: ▶️ Run windalert bot
+      - name: ▶️ Run windalert script
         run: python windalert_bot.py
