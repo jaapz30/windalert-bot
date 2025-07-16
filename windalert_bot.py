@@ -13,10 +13,18 @@ KNMI_API_KEY = os.environ.get("KNMI_API_KEY")
 WEERLIVE_API_KEY = os.environ.get("WEERLIVE_API_KEY")
 
 # 📍 Configuratie
-STATION_KNMI = "330"  # Vlissingen
+STATION_KNMI = "330"  # Vlissingen voor windstoten
 LAT = 51.75
 LON = 3.87
 KNOT_CONV = 0.539957
+
+# 🌬️ Windrichting naar tekst
+RICHTINGEN = ['N', 'NNO', 'NO', 'ONO', 'O', 'OZO', 'ZO', 'ZZO',
+              'Z', 'ZZW', 'ZW', 'WZW', 'W', 'WNW', 'NW', 'NNW']
+
+def graden_naar_richting(graden):
+    index = int((graden + 11.25) // 22.5) % 16
+    return RICHTINGEN[index]
 
 # 🌬️ Gemeten wind uit Renesse (WeerLive)
 def get_renesse_wind():
@@ -26,7 +34,8 @@ def get_renesse_wind():
         live = data["liveweer"][0]
         wind_ms = float(live["winds"])
         wind_kn = round(wind_ms * 1.94384)
-        richting = int(live["windrgr"])
+        richting_graden = int(live["windrgr"])
+        richting = graden_naar_richting(richting_graden)
         return wind_kn, richting
     except Exception as e:
         print("❌ Fout bij WeerLive:", e)
@@ -54,14 +63,14 @@ def get_knmi_gust():
         print("❌ Fout bij KNMI gust:", e)
         return None
 
-# 🔁 Fallback via Open-Meteo
+# 🔄 Fallback via Open-Meteo
 def get_openmeteo():
     try:
         url = f"https://api.open-meteo.com/v1/forecast?latitude={LAT}&longitude={LON}&current_weather=true&hourly=wind_gusts_10m&wind_speed_unit=kn&forecast_hours=1&timezone=Europe/Amsterdam"
         data = requests.get(url).json()
         wind = round(data["current_weather"]["windspeed"])
         gust = round(data["hourly"]["wind_gusts_10m"][0])
-        richting = data["current_weather"]["winddirection"]
+        richting = graden_naar_richting(data["current_weather"]["winddirection"])
         print("⚠️ Open-Meteo fallback gebruikt")
         return wind, gust, richting
     except Exception as e:
@@ -70,7 +79,7 @@ def get_openmeteo():
 
 # 📩 Telegrambericht sturen
 def stuur_telegram(wind, gust, richting):
-    bericht = f"💨 *WINDALARM*\nSnelheid: {wind} knopen\nStoten: {gust} knopen\nRichting: {richting}°"
+    bericht = f"💨 *WINDALARM*\nSnelheid: {wind} knopen\nStoten: {gust} knopen\nRichting: {richting}"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
