@@ -82,7 +82,7 @@ def stuur_telegram(wind, gust, richting):
 # 🧠 Hoofdprogramma
 def main():
     uur = datetime.datetime.now().hour
-    if uur in [7, 10, 13, 16, 19, 22]:
+    if uur in [7, 10, 13, 16, 19, 21, 22]:
         wind, richting = get_renesse_wind()
         gust = get_knmi_gust()
 
