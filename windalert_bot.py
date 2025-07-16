@@ -18,26 +18,21 @@ def get_winddata():
         data = response.json()
 
         live = data["liveweer"][0]
-        # m/s omrekenen naar knopen
         wind = round(float(live["winds"]) * 1.94384)
-        gust = round(float(live.get("windstoten") or 0) * 1.94384)
+        gust_raw = live.get("windstoten")
+        gust = round(float(gust_raw) * 1.94384) if gust_raw else None
         richting = live["windr"]
-        tijd = live["time"]
-        return wind, gust, richting, tijd
+        return wind, gust, richting
     except Exception as e:
         print("❌ Fout bij ophalen winddata:", e)
-        return None, None, None, None
+        return None, None, None
 
 # 📩 Telegrambericht sturen
-def stuur_telegram(wind, gust, richting, tijd):
-    bericht = (
-        f"💨 *WINDUPDATE*\n"
-        f"Tijdstip: {tijd}\n"
-        f"Snelheid: {wind} knopen\n"
-        f"Stoten: {gust} knopen\n"
-        f"Richting: {richting}°\n"
-        f"🌐 [SWA windapp](https://jaapz30.github.io/SWA-weatherapp/)"
-    )
+def stuur_telegram(wind, gust, richting):
+    bericht = f"💨 *WINDALARM*\nSnelheid: {wind} knopen"
+    if gust:
+        bericht += f"\nStoten: {gust} knopen"
+    bericht += f"\nRichting: {richting}°"
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
@@ -49,17 +44,16 @@ def stuur_telegram(wind, gust, richting, tijd):
 
 # 🧠 Hoofdscript
 def main():
-    wind, gust, richting, tijd = get_winddata()
+    wind, gust, richting = get_winddata()
     if wind is None:
         print("❌ Geen data beschikbaar.")
         return
 
-    # Controleer of huidige tijd binnen 07:00–22:00 valt
     uur = datetime.datetime.now().hour
     if 7 <= uur <= 22:
-        stuur_telegram(wind, gust, richting, tijd)
+        stuur_telegram(wind, gust, richting)
     else:
-        print("⏰ Buiten actieve uren (07:00–22:00). Geen melding verzonden.")
+        print("⏰ Buiten actieve uren. Geen melding verzonden.")
 
 if __name__ == "__main__":
     main()
