@@ -18,8 +18,9 @@ def get_winddata():
         data = response.json()
 
         live = data["liveweer"][0]
-        wind = round(float(live["windknp"]))
-        gust = round(float(live.get("windknpmax") or 0))
+        # m/s omrekenen naar knopen
+        wind = round(float(live["winds"]) * 1.94384)
+        gust = round(float(live.get("windstoten") or 0) * 1.94384)
         richting = live["windr"]
         tijd = live["time"]
         return wind, gust, richting, tijd
