@@ -2,8 +2,8 @@ name: Windalert Telegram Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'        # ⏰ Draait elk uur (UTC-tijd)
-  workflow_dispatch:           # 🖱️ Handmatig draaien
+    - cron: '0 * * * *'        # ⏰ Elk uur (UTC)
+  workflow_dispatch:           # 🖱️ Handmatig starten via GitHub
 
 jobs:
   run-windalert:
