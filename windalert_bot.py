@@ -79,10 +79,10 @@ def stuur_telegram(wind, gust, richting):
     requests.post(url, data=payload)
     print("✅ Bericht verzonden")
 
-# 🔁 Hoofdprogramma
+# 🧠 Hoofdprogramma
 def main():
     uur = datetime.datetime.now().hour
-    if 7 <= uur <= 22 and uur % 3 == 1:
+    if uur in [7, 10, 13, 16, 19, 22]:
         wind, richting = get_renesse_wind()
         gust = get_knmi_gust()
 
@@ -97,4 +97,5 @@ def main():
         print("⏰ Buiten actieve tijden.")
 
 if __name__ == "__main__":
+    print("🚀 Script gestart")
     main()
