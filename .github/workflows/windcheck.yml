@@ -1,9 +1,9 @@
-name: Windalert Renesse met KNMI fallback
+name: Windalert Renesse met fallback
 
 on:
   schedule:
-    - cron: '0 */1 * * *'  # ⏱️ Elke 60 minuten, filter in Python
-  workflow_dispatch:
+    - cron: '0 */1 * * *'  # ⏱️ Elk uur
+  workflow_dispatch:       # 👈 Handmatige testrun mogelijk
 
 jobs:
   run-windalert:
@@ -27,5 +27,5 @@ jobs:
       - name: 📦 Install dependencies
         run: pip install requests
 
-      - name: ▶️ Run windalert
+      - name: ▶️ Run windalert bot
         run: python windalert_bot.py
