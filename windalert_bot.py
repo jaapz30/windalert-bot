@@ -18,9 +18,9 @@ LAT = 51.75
 LON = 3.87
 KNOT_CONV = 0.539957
 
-# 🌬️ Windrichting naar tekst
-RICHTINGEN = ['N', 'NNO', 'NO', 'ONO', 'O', 'OZO', 'ZO', 'ZZO',
-              'Z', 'ZZW', 'ZW', 'WZW', 'W', 'WNW', 'NW', 'NNW']
+# 🌬️ Windrichting naar tekst (correcte volgorde 16-staps windroos)
+RICHTINGEN = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+              'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
 
 def graden_naar_richting(graden):
     index = int((graden + 11.25) // 22.5) % 16
