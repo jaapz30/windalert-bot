@@ -1,9 +1,9 @@
-name: Windalert Renesse
+name: Windalert Renesse met KNMI fallback
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # ⏱️ Elke 3 uur
-  workflow_dispatch:        # 🖱️ Handmatig starten via GitHub
+    - cron: '0 */1 * * *'  # ⏱️ Elke 60 minuten, filter in Python
+  workflow_dispatch:
 
 jobs:
   run-windalert:
@@ -12,6 +12,7 @@ jobs:
     env:
       TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      KNMI_API_KEY: ${{ secrets.KNMI_API_KEY }}
       WEERLIVE_API_KEY: ${{ secrets.WEERLIVE_API_KEY }}
 
     steps:
@@ -26,5 +27,5 @@ jobs:
       - name: 📦 Install dependencies
         run: pip install requests
 
-      - name: ▶️ Run windalert script
+      - name: ▶️ Run windalert
         run: python windalert_bot.py
