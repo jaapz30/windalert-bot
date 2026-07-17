@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "enabled": false,
   "active_spot": null,
   "telegram_update_offset": 0,
