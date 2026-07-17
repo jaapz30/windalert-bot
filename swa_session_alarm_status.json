@@ -1,7 +1,8 @@
 {
   "version": 3,
-  "enabled": false,
-  "active_spot": null,
+  "enabled": true,
+  "active_spot": "makkum",
   "telegram_update_offset": 0,
-  "spots": {}
+  "spots": {},
+  "updated_at": "2026-07-17T10:54:18Z"
 }
