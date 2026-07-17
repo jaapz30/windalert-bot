@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "enabled": false,
+  "active_spot": null,
+  "telegram_update_offset": 0,
+  "spots": {}
+}
