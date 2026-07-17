@@ -40,6 +40,7 @@ jobs:
         run: python swa_session_alarm.py
 
       - name: Alarmstatus terugschrijven
+        if: always()
         shell: bash
         run: |
           if git diff --quiet -- swa_session_alarm_status.json; then
