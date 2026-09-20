@@ -5,12 +5,12 @@
   "telegram_update_offset": 0,
   "spots": {
     "makkum": {
-      "last_alert_id": "swa-session-makkum-2026-09-20",
-      "event_date": "2026-09-20",
-      "level": "strong",
-      "reason": "sterke drukgradiënt · bovenwinds 24 kt · 100% ensemblekans",
-      "sent_at": "2026-09-20T06:22:29Z"
+      "last_alert_id": "swa-session-makkum-2026-09-21",
+      "event_date": "2026-09-21",
+      "level": "watch",
+      "reason": "sterke drukgradiënt · bovenwinds 23 kt",
+      "sent_at": "2026-09-20T21:54:11Z"
     }
   },
-  "updated_at": "2026-09-20T19:48:43Z"
+  "updated_at": "2026-09-20T21:54:11Z"
 }
